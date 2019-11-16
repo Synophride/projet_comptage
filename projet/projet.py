@@ -22,9 +22,21 @@ class ConstructorRule(AbstractRule):
     def __init__(self):
         self._parameters = None
         self._valuation = None
+        self._cache = dict() 
 
     def valuation(self):
         return self._valuation 
+    
+    def count(self, n):
+        if n in self._dict:
+            return self._dict[n]
+        else:
+            val = self._count(n) 
+            self._dict[n] = val 
+            return val
+
+    def _count(self, n):
+        raise NotImplementedError
     
     def _update_valuation(self):
         raise NotImplementedError
@@ -50,11 +62,11 @@ class UnionRule(ConstructorRule):
         assert(oldv >= self._valuation)
         return (oldv > self._valuation)
     
-    def count(self,n): 
+    def _count(self,n): 
         c1 = self._grammar[self._fst].count(n)
         c2 = self._grammar[self._snd].count(n)
         return c1 + c2
-        
+
 
     def unrank(self, n, rank):
         if(rank >= self.count(n)):
@@ -94,7 +106,7 @@ class ProductRule(ConstructorRule):
         assert(oldv >= self._valuation)
         return(oldv > self._valuation)
 
-    def count(self, n):
+    def _count(self, n):
         r1 = self._grammar[self._fst]
         r2 = self._grammar[self._snd]
         v1 = r1.valuation()
