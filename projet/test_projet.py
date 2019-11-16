@@ -66,4 +66,4 @@ for i in range(7):
         for j in range(len(rule_list)):
             l_obj = rule_list[j]
             unranked_obj = treeGram[rule_name].unrank(i, j)
-            assert(l_obj == unranked_obj)
+            assert(str(l_obj) == str(unranked_obj))

@@ -58,7 +58,7 @@ class UnionRule(ConstructorRule):
 
     def unrank(self, n, rank):
         if(rank >= self.count(n)):
-            raise ValueError
+            raise ValueError("count = " + str(self.count(n)) +"\t rank = " + str(rank))  
         else: 
             r1 = self._grammar[self._fst]
             c1 = r1.count(n)
@@ -111,7 +111,7 @@ class ProductRule(ConstructorRule):
     def unrank(self, n, rank):
         nb_objets = self.count(n) 
         if(rank >= nb_objets):
-            raise ValueError
+            raise ValueError("count = " + nb_objets + "\trang = " + rank)
         
         r1 = self._grammar[self._fst]
         r2 = self._grammar[self._snd] 
@@ -121,21 +121,35 @@ class ProductRule(ConstructorRule):
         somme = 0
         diff  = 0
         count = 0
+        c1 = 0
+        c2 = 0 
+        broke = False
         for i in range(n+1):
             j = n - i
-             
-            count =  r1.count(i) * r2.count(j) # nombre d'objets où les objets de r1 ont une taille i, et les objets de r2 ont une taille j 
+            c1 = r1.count(i)
+            c2 = r2.count(j)
+            count = c1 * c2 # nombre d'objets où les objets de r1 ont une taille i, et les objets de r2 ont une taille j 
+            
             if(somme + count > rank):
                 n_fst = i
                 n_snd = j
-                diff = n - somme
+                assert(c1 > 0 and c2 > 0)
+                diff = rank - somme
+                broke = True
                 break
             
             else:
                 somme += count 
-        rank_fst = diff // count
-        rank_snd = diff % count
+                assert(somme <= rank) 
         
+        assert(broke)
+        print(rank, "\tz\t", somme, "\t", count) 
+        
+        rank_fst = diff // c1 
+        rank_snd = diff % c1
+        
+        assert(rank_fst < c1)
+        assert(rank_snd < c2) 
         fst_obj = r1.unrank(n_fst, rank_fst)
         snd_obj = r2.unrank(n_snd, rank_snd)
         
@@ -188,10 +202,10 @@ class SingletonRule(ConstantRule):
             return 1
         else:
             return 0 
-            
+   
     def unrank(self, n, rank): 
-        if( rank > self.count(n)):
-            raise ValueError
+        if( rank >= self.count(n)):
+            raise ValueError("rank = " + str(rank) + "\t count = " + str(self.count(n)))
         else:
             return self._object
             
@@ -214,8 +228,8 @@ class EpsilonRule(ConstantRule):
             return 0
     
     def unrank(self, n, rank): 
-        if( rank > self.count(n)):
-            raise ValueError
+        if( rank >= self.count(n)):
+            raise ValueError("rank = " + str(rank) + "\t count = " + str(self.count(n)))
         else:
             return self._object
     
