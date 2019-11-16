@@ -1,6 +1,10 @@
 # coding=utf8
 max_int = 2**100 
 
+class WTFexception(Exception):
+    def __init__(self, s):
+        self._s = s
+
 class AbstractRule:
     def __init__(self):
         self._grammar = dict()
@@ -28,11 +32,11 @@ class ConstructorRule(AbstractRule):
         return self._valuation 
     
     def count(self, n):
-        if n in self._dict:
-            return self._dict[n]
+        if n in self._cache:
+            return self._cache[n]
         else:
             val = self._count(n) 
-            self._dict[n] = val 
+            self._cache[n] = val 
             return val
 
     def _count(self, n):
@@ -51,6 +55,7 @@ class UnionRule(ConstructorRule):
         self._fst = fst
         self._snd = snd
         self._parameters = (fst, snd)
+        self._cache = dict()
     """ Rend True si la valeur a été mise à jour
         False sinon
     """
@@ -97,6 +102,8 @@ class ProductRule(ConstructorRule):
         self._snd = snd
         self._cons= cons
         self._valuation = max_int
+        self._cache = dict() 
+        
 
     def _update_valuation(self):
         v1 = self._grammar[self._fst].valuation()
@@ -130,13 +137,19 @@ class ProductRule(ConstructorRule):
         
         n_fst = 0
         n_snd = 0
+        
         somme = 0
         diff  = 0
         count = 0
+        
         c1 = 0
         c2 = 0 
+        
         broke = False
+        i = 0 
         for i in range(n+1):
+            if(broke):
+                raise WTFexception
             j = n - i
             c1 = r1.count(i)
             c2 = r2.count(j)
@@ -145,23 +158,25 @@ class ProductRule(ConstructorRule):
             if(somme + count > rank):
                 n_fst = i
                 n_snd = j
-                assert(c1 > 0 and c2 > 0)
+                assert(c1 > 0)
+                assert(c2 > 0)
+                print("c", c1, "\t", c2) 
                 diff = rank - somme
                 broke = True
                 break
             
             else:
                 somme += count 
-                assert(somme <= rank) 
-        
+                assert(somme <= rank)         
         assert(broke)
         print(rank, "\tz\t", somme, "\t", count) 
-        
+        print("op = ", diff, "/", c1)  
         rank_fst = diff // c1 
         rank_snd = diff % c1
         
-        assert(rank_fst < c1)
-        assert(rank_snd < c2) 
+        assert(rank_fst < c1), (rank_fst, c1)
+        assert(rank_snd < c2), (rank_snd, c2)
+        
         fst_obj = r1.unrank(n_fst, rank_fst)
         snd_obj = r2.unrank(n_snd, rank_snd)
         
@@ -270,3 +285,90 @@ def init_grammar(g):
             rule = g[key]
             b = b or rule._update_valuation()
             # TODO : vérifier qu'aucune règle n'est à max_int 
+            
+            
+            
+#############################
+### Grammaires condensées ###
+#############################
+UNION = 0
+PROD = 1 
+SINGLETON = 2 
+EPSILON = 3
+class CondensedRule():
+    pass
+   
+class Union(CondensedRule):
+    def __init__(self, r1, r2):
+        self._r1 = r1
+        self._r2 = r2
+        self.type = UNION
+        
+        
+ class Prod(CondensedRule):
+    def __init__(self, r1, r2, cons):
+        self._r1 = r1
+        self._r2 = r2
+        self._cons = cons 
+        self.type = PROD 
+        
+ class Singleton(CondensedRule):
+    def __init__(self, obj):
+        self._obj = obj 
+        self.type = SINGLETON
+ class Epsilon(CondensedRule):
+    def __init__(self, obj):
+        self._obj = obj
+        self.type = EPSILON
+
+def simplif_rule(rule, mk_var, d, keys_base):
+    t = rule.type
+    
+    # switch du pauvre 
+    if t == UNION:
+
+        nom_sous_regle_1 = mk_var() 
+        while(nom_sous_regle_1 in d.keys() or nom_sous_regle_1 in keys_base):
+            nom_sous_regle_1 = mk_var() 
+        
+        nom_sous_regle_2 = mk_var() 
+        while(nom_sous_regle_2 in d.keys() or nom_sous_regle_2 in keys_base):
+            nom_sous_regle_2 = mk_var() 
+        
+        d[nom_sous_regle_1] = simplif_rule(rule._r1, mk_var, d)
+        d[nom_sous_regle_2] = simplif_rule(rule._r2, mk_var, d) 
+        return UnionRule(nom_sous_regle_1, nom_sous_regle_2)
+   
+    elif t == PROD:
+          nom_sous_regle_1 = mk_var() 
+        while(nom_sous_regle_1 in d.keys() or nom_sous_regle_1 in keys_base):
+            nom_sous_regle_1 = mk_var() 
+        
+        nom_sous_regle_2 = mk_var() 
+        while(nom_sous_regle_2 in d.keys() or nom_sous_regle_1 in keys_base):
+            nom_sous_regle_2 = mk_var() 
+        
+        d[nom_sous_regle_1] = simplif_rule(rule._r1, mk_var, d)
+        d[nom_sous_regle_2] = simplif_rule(rule._r2, mk_var, d) 
+        return UnionRule(nom_sous_regle_1, nom_sous_regle_2, rule._cons)
+    elif t == SINGLETON:
+        return SingletonRule(rule._obj)
+    elif t == EPSILON:
+        return EpsilonRule(rule._obj) 
+
+#TODO : Vérifier le non-écrasage de nouvelles règles 
+def simplify_grammar(cond_g):
+    new_gram = dict()
+    cpt_regle = 0
+    
+    def mk_str_rule():
+        x = cpt_regle
+        cpt_regle += 1
+        return str(x) 
+    
+    base_keys = set(cond_g.keys())
+    
+    for rule_name in base_keys:
+        new_gram[rule_name] = simplif_rule(cond_g[rule_name], mk_str_rule, new_gram, base_keys)
+    
+    return new_gram
