@@ -38,7 +38,7 @@ class UnionRule(ConstructorRule):
         self._valuation = max_int
         self._fst = fst
         self._snd = snd
-        
+        self._parameters = (fst, snd)
     """ Rend True si la valeur a été mise à jour
         False sinon
     """
@@ -57,7 +57,7 @@ class UnionRule(ConstructorRule):
         
 
     def unrank(self, n, rank):
-        if(rank >= self.count(n):
+        if(rank >= self.count(n)):
             raise ValueError
         else: 
             r1 = self._grammar[self._fst]
@@ -109,7 +109,7 @@ class ProductRule(ConstructorRule):
         return s
     
     def unrank(self, n, rank):
-        nb_objets = self.ccount(n) 
+        nb_objets = self.count(n) 
         if(rank >= nb_objets):
             raise ValueError
         
@@ -119,7 +119,7 @@ class ProductRule(ConstructorRule):
         n_fst = 0
         n_snd = 0
         somme = 0
-        diff = 0
+        diff  = 0
         count = 0
         for i in range(n+1):
             j = n - i
@@ -133,8 +133,14 @@ class ProductRule(ConstructorRule):
             
             else:
                 somme += count 
-        fst_rank = diff // count
-        snd_rank = diff % count
+        rank_fst = diff // count
+        rank_snd = diff % count
+        
+        fst_obj = r1.unrank(n_fst, rank_fst)
+        snd_obj = r2.unrank(n_snd, rank_snd)
+        
+        return self._cons(fst_obj, snd_obj)
+        
         
     def list(self, n):
         r1 = self._grammar[self._fst]

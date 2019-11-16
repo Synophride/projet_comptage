@@ -57,3 +57,13 @@ print("Test des listes")
 print("Liste pour n = 4")
 for t in treeGram["Tree"].list(4):
     print(t) 
+
+
+print("Comparaison de list et unrank") 
+for i in range(7):
+    for rule_name in treeGram.keys():
+        rule_list = treeGram[rule_name].list(i)
+        for j in range(len(rule_list)):
+            l_obj = rule_list[j]
+            unranked_obj = treeGram[rule_name].unrank(i, j)
+            assert(l_obj == unranked_obj)
