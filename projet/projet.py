@@ -8,13 +8,15 @@ class AbstractRule:
     def set_grammar(self, g):
         self._grammar = g
     def count(self, n):
-        pass
+        raise NotImplementedError
     def list(self, n):
-        pass
+        raise NotImplementedError
+    def unrank(self, n, rank):
+        raise NotImplementedError
     
     def valuation(self):
-        return None
-
+        raise NotImplementedError
+    
     
 class ConstructorRule(AbstractRule):
     def __init__(self):
@@ -25,7 +27,7 @@ class ConstructorRule(AbstractRule):
         return self._valuation 
     
     def _update_valuation(self):
-        pass
+        raise NotImplementedError
 
 
 # parameters ?= (fst snd) 
@@ -52,16 +54,26 @@ class UnionRule(ConstructorRule):
         c1 = self._grammar[self._fst].count(n)
         c2 = self._grammar[self._snd].count(n)
         return c1 + c2
-    
+        
+
+    def unrank(self, n, rank):
+        nb_objets = self.count(n) 
+        r1 = self._grammar[self._fst]
+        r2 = self._grammar[self._snd]
+        if rank >= nb_objets:
+            raise ValueError
+        else:
+            for i in range(n+1):
+                j = n - i 
+                
     ## Problème : Si une règle union s'auto référence, ça peut
-    ## boucler indéfiniment 
+    ## boucler indéfiniment (enfin peut-être, je suis pas vraiment sûr) 
     def list(self, n):
         r1 = self._grammar[self._fst].list(n)
         r2 = self._grammar[self._snd].list(n)
         return r1 + r2 
     
-        
-        
+    
 class ProductRule(ConstructorRule):
     def __init__(self, fst, snd, cons):
         self._fst = fst
@@ -99,9 +111,9 @@ class ProductRule(ConstructorRule):
         v2 = r2.valuation() 
         ret = []
         
-        for i in range(n):
+        for i in range(n+1):
             j = n - i 
-            if(i <= v1 or j <= v2):
+            if(i < v1 or j < v2):
                 continue
             
             l1 = r1.list(i)
@@ -137,6 +149,13 @@ class SingletonRule(ConstantRule):
             return 1
         else:
             return 0 
+            
+    def unrank(self, n, rank): 
+        if( rank > self.count(n)):
+            raise ValueError
+        else:
+            return self._object
+            
     def list(self, n):
         if n == 1: 
             return [self._object]
@@ -155,9 +174,18 @@ class EpsilonRule(ConstantRule):
         else :
             return 0
     
+    def unrank(self, n, rank): 
+        if( rank > self.count(n)):
+            raise ValueError
+        else:
+            return self._object
+    
     # a voir
     def list(self, n):
-        return []
+        if n == 0:
+            return [self._object]
+        else:
+            return []
         
 
 """ Initialise une grammaire 
