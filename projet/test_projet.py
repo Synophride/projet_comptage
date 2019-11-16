@@ -21,6 +21,7 @@ treeGram = {"Tree" : UnionRule("Node", "Leaf"),
             "Node" : ProductRule("Tree", "Tree", lambda a, b : Node(a, b)),
             "Leaf" : SingletonRule(Leaf)}
 
+
 fiboGram = { "Fib" : UnionRule("Vide", "Cas1"), 
              "Cas1": UnionRule("CasAu", "Cas2"),
              "Cas2": UnionRule("AtomB", "CasBAu"),
@@ -53,6 +54,6 @@ for i in range(0, 7):
         assert( len(fiboGram[rule_name].list(i)) == fiboGram[rule_name].count(i))
 
 print("Test des listes") 
-print()
-print(treeGram["Tree"].list(4)) 
-        
+print("Liste pour n = 4")
+for t in treeGram["Tree"].list(4):
+    print(t) 

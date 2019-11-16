@@ -57,15 +57,20 @@ class UnionRule(ConstructorRule):
         
 
     def unrank(self, n, rank):
-        nb_objets = self.count(n) 
-        r1 = self._grammar[self._fst]
-        r2 = self._grammar[self._snd]
-        if rank >= nb_objets:
+        if(rank >= self.count(n):
             raise ValueError
-        else:
-            for i in range(n+1):
-                j = n - i 
-                
+        else: 
+            r1 = self._grammar[self._fst]
+            c1 = r1.count(n)
+            
+            r2 = self._grammar[self._snd] 
+            c2 = r2.count(n) 
+            if(rank < c1):
+                return r1.unrank(n, rank)
+            else: 
+                return r2.unrank(n, rank - c1)
+
+
     ## Problème : Si une règle union s'auto référence, ça peut
     ## boucler indéfiniment (enfin peut-être, je suis pas vraiment sûr) 
     def list(self, n):
@@ -103,6 +108,34 @@ class ProductRule(ConstructorRule):
             s += r1.count(i) * r2.count(j)
         return s
     
+    def unrank(self, n, rank):
+        nb_objets = self.ccount(n) 
+        if(rank >= nb_objets):
+            raise ValueError
+        
+        r1 = self._grammar[self._fst]
+        r2 = self._grammar[self._snd] 
+        
+        n_fst = 0
+        n_snd = 0
+        somme = 0
+        diff = 0
+        count = 0
+        for i in range(n+1):
+            j = n - i
+             
+            count =  r1.count(i) * r2.count(j) # nombre d'objets où les objets de r1 ont une taille i, et les objets de r2 ont une taille j 
+            if(somme + count > rank):
+                n_fst = i
+                n_snd = j
+                diff = n - somme
+                break
+            
+            else:
+                somme += count 
+        fst_rank = diff // count
+        snd_rank = diff % count
+        
     def list(self, n):
         r1 = self._grammar[self._fst]
         r2 = self._grammar[self._snd]
@@ -122,7 +155,7 @@ class ProductRule(ConstructorRule):
                 for e2 in l2:
                     ret.append(self._cons(e1, e2))
         return ret
-        
+
         
 class ConstantRule(AbstractRule):
     def __init__(self):
@@ -204,3 +237,4 @@ def init_grammar(g):
         for key in keys:
             rule = g[key]
             b = b or rule._update_valuation()
+            # TODO : vérifier qu'aucune règle n'est à max_int 
