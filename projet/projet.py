@@ -295,6 +295,7 @@ UNION = 0
 PROD = 1 
 SINGLETON = 2 
 EPSILON = 3
+NONTERM = 4 
 class CondensedRule():
     pass
    
@@ -305,22 +306,26 @@ class Union(CondensedRule):
         self.type = UNION
         
         
- class Prod(CondensedRule):
+class Prod(CondensedRule):
     def __init__(self, r1, r2, cons):
         self._r1 = r1
         self._r2 = r2
         self._cons = cons 
         self.type = PROD 
         
- class Singleton(CondensedRule):
+class Singleton(CondensedRule):
     def __init__(self, obj):
         self._obj = obj 
         self.type = SINGLETON
- class Epsilon(CondensedRule):
+class Epsilon(CondensedRule):
     def __init__(self, obj):
         self._obj = obj
         self.type = EPSILON
-
+class NonTerm(CondensedRule):
+    def __init__(self, nom_regle):
+        self.type = NONTERM
+        self._nom = nom_regle
+        
 def simplif_rule(rule, mk_var, d, keys_base):
     t = rule.type
     
@@ -335,12 +340,13 @@ def simplif_rule(rule, mk_var, d, keys_base):
         while(nom_sous_regle_2 in d.keys() or nom_sous_regle_2 in keys_base):
             nom_sous_regle_2 = mk_var() 
         
-        d[nom_sous_regle_1] = simplif_rule(rule._r1, mk_var, d)
-        d[nom_sous_regle_2] = simplif_rule(rule._r2, mk_var, d) 
+        d[nom_sous_regle_1] = simplif_rule(rule._r1, mk_var, d, keys_base)
+        d[nom_sous_regle_2] = simplif_rule(rule._r2, mk_var, d, keys_base)
+        
         return UnionRule(nom_sous_regle_1, nom_sous_regle_2)
-   
+    
     elif t == PROD:
-          nom_sous_regle_1 = mk_var() 
+        nom_sous_regle_1 = mk_var() 
         while(nom_sous_regle_1 in d.keys() or nom_sous_regle_1 in keys_base):
             nom_sous_regle_1 = mk_var() 
         
@@ -348,14 +354,18 @@ def simplif_rule(rule, mk_var, d, keys_base):
         while(nom_sous_regle_2 in d.keys() or nom_sous_regle_1 in keys_base):
             nom_sous_regle_2 = mk_var() 
         
-        d[nom_sous_regle_1] = simplif_rule(rule._r1, mk_var, d)
-        d[nom_sous_regle_2] = simplif_rule(rule._r2, mk_var, d) 
+        d[nom_sous_regle_1] = simplif_rule(rule._r1, mk_var, d, keys_base)
+        d[nom_sous_regle_2] = simplif_rule(rule._r2, mk_var, d, keys_base) 
         return UnionRule(nom_sous_regle_1, nom_sous_regle_2, rule._cons)
+        
     elif t == SINGLETON:
         return SingletonRule(rule._obj)
+    
     elif t == EPSILON:
         return EpsilonRule(rule._obj) 
 
+def virer_nonterm(gram): 
+    pass
 #TODO : Vérifier le non-écrasage de nouvelles règles 
 def simplify_grammar(cond_g):
     new_gram = dict()

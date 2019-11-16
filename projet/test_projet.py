@@ -32,20 +32,21 @@ fiboGram = { "Fib" : UnionRule("Vide", "Cas1"),
              "CasBAu": ProductRule("AtomB", "CasAu", (lambda a,b : "".join([a,b])) )}
 
 print("initialisation des grammaires") 
+
 init_grammar(treeGram) 
 init_grammar(fiboGram)
 
+failed_tests = [] 
 print("Test de la valuation des grammaires")
 assert(treeGram["Tree"].valuation() == 1)
 assert(treeGram["Tree"].valuation() == 1)
     
-print("Test des count") 
+print("Test des count")
 assert(treeGram["Tree"].count(1) == 1)
 assert(treeGram["Tree"].count(4) == 5)
 assert(fiboGram["Fib"].count(3) == 5)
 assert(fiboGram["Fib"].count(6) == 21)
-
-
+ 
 print("Test d'égalité entre la longueur des listes et count") 
 for i in range(0, 7):
     for rule_name in treeGram.keys():
@@ -60,6 +61,7 @@ for t in treeGram["Tree"].list(4):
 
 
 print("Comparaison de list et unrank") 
+
 for i in range(7):
     for rule_name in treeGram.keys():
         rule_list = treeGram[rule_name].list(i)
@@ -67,3 +69,12 @@ for i in range(7):
             l_obj = rule_list[j]
             unranked_obj = treeGram[rule_name].unrank(i, j)
             assert(str(l_obj) == str(unranked_obj))
+
+##############################
+### Grammaires compliquées ###
+##############################
+
+#{ "Tree" : Union(Singleton(Leaf),
+ #                Prod()...
+ 
+ 
