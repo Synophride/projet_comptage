@@ -1,4 +1,5 @@
 # coding=utf8
+import random
 max_int = 2**100 
 
 class WTFexception(Exception):
@@ -25,7 +26,9 @@ class AbstractRule:
     def valuation(self):
         raise NotImplementedError
     
-    
+    def random(self, n):
+        raise NotImplementedError
+        
 class ConstructorRule(AbstractRule):
     def __init__(self):
         self._parameters = None
@@ -49,6 +52,9 @@ class ConstructorRule(AbstractRule):
     def _update_valuation(self):
         raise NotImplementedError
 
+    def random(self, n):
+        return self.unrank(n, random.randint(self.count(n)))
+    
 
 # parameters ?= (fst snd) 
 class UnionRule(ConstructorRule):
@@ -177,11 +183,10 @@ class ProductRule(ConstructorRule):
             else:
                 somme += count 
     
-        # |--- count --->| 
+        # |---- count --->| 
         # [ 1 | 2 | 3 | 4 ]
         # |---> . diff
-        # |<->  c1 
-        # diff // c1 est légitime
+        # |<->  c2
         rank_fst = diff // c2
         rank_snd = diff %  c2
         
@@ -229,6 +234,7 @@ class ConstantRule(AbstractRule):
     def _calc_valuation(self):
         pass
     
+ 
 class SingletonRule(ConstantRule):
     def __init__(self, obj):
         self._object = obj
@@ -256,6 +262,11 @@ class SingletonRule(ConstantRule):
     def __str__(self):
         return str(self._object)
     
+    def random(self, n, rank):
+        if n == 1 and rank == 0:
+            return self._object
+        else:
+            raise ValueError
 
 class EpsilonRule(ConstantRule):
     def __init__(self, obj):
@@ -269,6 +280,12 @@ class EpsilonRule(ConstantRule):
         else :
             return 0
     
+    def random(self, n, rank):
+        if n == 0 and rank == 0:
+            return self._object
+        else:
+            raise ValueError
+            
     def unrank(self, n, rank): 
         if( rank >= self.count(n)):
             raise ValueError("rank = " + str(rank) + "\t count = " + str(self.count(n)))
