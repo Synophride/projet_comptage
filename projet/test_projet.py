@@ -48,7 +48,7 @@ assert(fiboGram["Fib"].count(3) == 5)
 assert(fiboGram["Fib"].count(6) == 21)
 
 
-"""
+
 print("Test d'égalité entre la longueur des listes et count") 
 for i in range(0, 7):
     for rule_name in treeGram.keys():
@@ -63,15 +63,20 @@ for t in treeGram["Tree"].list(4):
 
 
 print("Comparaison de list et unrank") 
-
-for i in range(7):
-        rule_list = treeGram[rule_name].list(i)
-    for rule_name in treeGram.keys():
-        for j in range(len(rule_list)):
-            l_obj = rule_list[j]
-            unranked_obj = treeGram[rule_name].unrank(i, j)
-            assert(str(l_obj) == str(unranked_obj))
-"""
+for n in range(10):
+    print("n = " , n) 
+    g = treeGram 
+    rule_name = "Tree" 
+    rule = g[rule_name]
+    print("liste")
+    l = rule.list(n)
+    for e in l:
+        print(str(e))
+    print("fin liste") 
+    for rank in range(rule.count(n)):
+        print("rang ", rank) 
+        print("element de la liste :" , str(l[rank]))
+        print("element du unrank   :" , str(rule.unrank(n, rank)))
 ##############################
 ### Grammaires compliquées ###
 ##############################

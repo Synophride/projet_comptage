@@ -5,6 +5,10 @@ class WTFexception(Exception):
     def __init__(self, s):
         self._s = s
 
+class InvalidGrammar(Exception):
+    def __init__(self, s):
+        self._s = s
+
 class AbstractRule:
     def __init__(self):
         self._grammar = dict()
@@ -81,12 +85,12 @@ class UnionRule(ConstructorRule):
             c1 = r1.count(n)
             
             r2 = self._grammar[self._snd] 
-            c2 = r2.count(n) 
+            c2 = r2.count(n)
+            
             if(rank < c1):
                 return r1.unrank(n, rank)
             else: 
                 return r2.unrank(n, rank - c1)
-
 
     ## Problème : Si une règle union s'auto référence, ça peut
     ## boucler indéfiniment (enfin peut-être, je suis pas vraiment sûr) 
@@ -131,6 +135,7 @@ class ProductRule(ConstructorRule):
     
     def unrank(self, n, rank):
         nb_objets = self.count(n) 
+        
         if(rank >= nb_objets):
             raise ValueError("count = " + nb_objets + "\trang = " + rank)
         
@@ -153,7 +158,6 @@ class ProductRule(ConstructorRule):
         
         for i in range(n+1): # on veut avoir les cas i = 0 et i = n, 
         # dans les cas où il y a des objets de taille 0 dans les sous grammaires  
-          
             j = n - i
             c1 = r1.count(i) # Nombre d'objets de la première règle de taille i 
             c2 = r2.count(j) # Nombre d'objets de la secconde règle de taille n - i 
@@ -170,22 +174,24 @@ class ProductRule(ConstructorRule):
                 diff = rank - somme # rang de l'objet dans le sous ensemble 
                 broke = True
                 break
-            
             else:
                 somme += count 
-                
-
-        rank_fst = diff // c1 
-        rank_snd = diff % c1
+    
+        # |--- count --->| 
+        # [ 1 | 2 | 3 | 4 ]
+        # |---> . diff
+        # |<->  c1 
+        # diff // c1 est légitime
+        rank_fst = diff // c2
+        rank_snd = diff %  c2
         
-        assert(rank_fst < c1), (rank_fst, c1)
-        assert(rank_snd < c2), (rank_snd, c2)
+        assert(rank_fst < c1), (rank_fst, c1) # cet assert ne passe pas, rank_fst = c1 = 1 
+        assert(rank_snd < c2), (rank_snd, c2) 
         
         fst_obj = r1.unrank(n_fst, rank_fst)
         snd_obj = r2.unrank(n_snd, rank_snd)
         
         return self._cons(fst_obj, snd_obj)
-        
     
     def list(self, n):
         r1 = self._grammar[self._fst]
@@ -395,6 +401,7 @@ class Cpt():
         i = self.i 
         self.i += 1
         return str(i) 
+
 
 ## Supprime les doublons d'une grammaire donnée 
 def virer_doublons(g):
