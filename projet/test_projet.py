@@ -46,7 +46,9 @@ assert(treeGram["Tree"].count(1) == 1)
 assert(treeGram["Tree"].count(4) == 5)
 assert(fiboGram["Fib"].count(3) == 5)
 assert(fiboGram["Fib"].count(6) == 21)
- 
+
+
+"""
 print("Test d'égalité entre la longueur des listes et count") 
 for i in range(0, 7):
     for rule_name in treeGram.keys():
@@ -63,18 +65,22 @@ for t in treeGram["Tree"].list(4):
 print("Comparaison de list et unrank") 
 
 for i in range(7):
-    for rule_name in treeGram.keys():
         rule_list = treeGram[rule_name].list(i)
+    for rule_name in treeGram.keys():
         for j in range(len(rule_list)):
             l_obj = rule_list[j]
             unranked_obj = treeGram[rule_name].unrank(i, j)
             assert(str(l_obj) == str(unranked_obj))
-
+"""
 ##############################
 ### Grammaires compliquées ###
 ##############################
 
-#{ "Tree" : Union(Singleton(Leaf),
- #                Prod()...
- 
- 
+cg1 = { "Tree" : Union(Singleton(Leaf), 
+                 Prod( NonTerm("Tree"), NonTerm("Tree"), 
+                 lambda a, b : "".join([a,b]))) } 
+
+simplified_tree = simplify_grammar(cg1)
+
+for rule in simplified_tree.keys():
+    print(rule, " :\t" , simplified_tree[rule])

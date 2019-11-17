@@ -94,7 +94,9 @@ class UnionRule(ConstructorRule):
         r1 = self._grammar[self._fst].list(n)
         r2 = self._grammar[self._snd].list(n)
         return r1 + r2 
-    
+        
+    def __str__(self):
+        return "(" + self._fst + " | " + self._snd + " )" 
     
 class ProductRule(ConstructorRule):
     def __init__(self, fst, snd, cons):
@@ -132,45 +134,47 @@ class ProductRule(ConstructorRule):
         if(rank >= nb_objets):
             raise ValueError("count = " + nb_objets + "\trang = " + rank)
         
+        # Grammaires 
         r1 = self._grammar[self._fst]
         r2 = self._grammar[self._snd] 
         
-        n_fst = 0
-        n_snd = 0
+        n_fst = 0 # Dimension du premier objets 
+        n_snd = 0 # Dimension du second objet 
         
-        somme = 0
-        diff  = 0
-        count = 0
+        somme = 0 # compteur permettant de compter le nombre d'objets déjà vus 
+        diff  = 0 # Rang de l'objet cherché si le premier objet est de taille
+                  # n_fst et le second de taille n_snd
+        count = 0 # Nombre de séquances d'objets pour une taille donnée 
         
         c1 = 0
         c2 = 0 
         
         broke = False
-        i = 0 
-        for i in range(n+1):
-            if(broke):
-                raise WTFexception
+        
+        for i in range(n+1): # on veut avoir les cas i = 0 et i = n, 
+        # dans les cas où il y a des objets de taille 0 dans les sous grammaires  
+          
             j = n - i
-            c1 = r1.count(i)
-            c2 = r2.count(j)
-            count = c1 * c2 # nombre d'objets où les objets de r1 ont une taille i, et les objets de r2 ont une taille j 
+            c1 = r1.count(i) # Nombre d'objets de la première règle de taille i 
+            c2 = r2.count(j) # Nombre d'objets de la secconde règle de taille n - i 
             
-            if(somme + count > rank):
-                n_fst = i
+            count = c1 * c2 # Nombre d'objets de taille n dans la règle courante, 
+                # où les objets dérivant de la première sous règle sont de taille i
+                # et où ... seconde sous règle ... taille j 
+            
+            if(somme + count > rank): # dans ce cas, on a trouvé le bon i 
+                n_fst = i # Le premier sous-élément sera de taille i 
                 n_snd = j
                 assert(c1 > 0)
                 assert(c2 > 0)
-                print("c", c1, "\t", c2) 
-                diff = rank - somme
+                diff = rank - somme # rang de l'objet dans le sous ensemble 
                 broke = True
                 break
             
             else:
                 somme += count 
-                assert(somme <= rank)         
-        assert(broke)
-        print(rank, "\tz\t", somme, "\t", count) 
-        print("op = ", diff, "/", c1)  
+                
+
         rank_fst = diff // c1 
         rank_snd = diff % c1
         
@@ -182,7 +186,7 @@ class ProductRule(ConstructorRule):
         
         return self._cons(fst_obj, snd_obj)
         
-        
+    
     def list(self, n):
         r1 = self._grammar[self._fst]
         r2 = self._grammar[self._snd]
@@ -203,7 +207,9 @@ class ProductRule(ConstructorRule):
                     ret.append(self._cons(e1, e2))
         return ret
 
-        
+    def __str__(self):
+        return "( " + self._fst + " x " + self._snd + " )" 
+
 class ConstantRule(AbstractRule):
     def __init__(self):
         self._object = None
@@ -241,7 +247,10 @@ class SingletonRule(ConstantRule):
             return [self._object]
         else:
             return []
-         
+    def __str__(self):
+        return str(self._object)
+    
+
 class EpsilonRule(ConstantRule):
     def __init__(self, obj):
         self._object = obj
@@ -266,7 +275,8 @@ class EpsilonRule(ConstantRule):
             return [self._object]
         else:
             return []
-        
+    def __str__(self):
+        return "eps" 
 
 """ Initialise une grammaire 
     Vérifier qu'aucun des count ne reste à l'infini ? 
@@ -293,9 +303,10 @@ def init_grammar(g):
 #############################
 UNION = 0
 PROD = 1 
-SINGLETON = 2 
+SINGLETON = 2  
 EPSILON = 3
-NONTERM = 4 
+NONTERM = 4
+
 class CondensedRule():
     pass
    
@@ -304,8 +315,7 @@ class Union(CondensedRule):
         self._r1 = r1
         self._r2 = r2
         self.type = UNION
-        
-        
+
 class Prod(CondensedRule):
     def __init__(self, r1, r2, cons):
         self._r1 = r1
@@ -317,68 +327,89 @@ class Singleton(CondensedRule):
     def __init__(self, obj):
         self._obj = obj 
         self.type = SINGLETON
+
 class Epsilon(CondensedRule):
     def __init__(self, obj):
         self._obj = obj
         self.type = EPSILON
+
 class NonTerm(CondensedRule):
     def __init__(self, nom_regle):
         self.type = NONTERM
         self._nom = nom_regle
-        
-def simplif_rule(rule, mk_var, d, keys_base):
+    
+### Ajoute un équivalent de la règle de grammaire "compliquée" 
+### donnée en paramètre pour ajouter une ou plusieurs règles équivalentes
+### dans le dictionnaire d donné en paramètre
+### paramètres  : 
+### rule : CondensedRule - La règle à "traduire" 
+### mk_var : () -> str - une fonction de création de noms de règles
+### d : dict(str -> AbstractRule) - Le dictionnaire où l'on traduit 
+### keys_base : set(str) - La liste des règles dans la CondensedRule, pour 
+###     ne pas créer de règles avec des noms déjà existants
+def simplif_rule(rule, cpt, d, keys_base):
     t = rule.type
     
     # switch du pauvre 
     if t == UNION:
 
-        nom_sous_regle_1 = mk_var() 
+        nom_sous_regle_1 = cpt.get() 
         while(nom_sous_regle_1 in d.keys() or nom_sous_regle_1 in keys_base):
-            nom_sous_regle_1 = mk_var() 
+            nom_sous_regle_1 = cpt.get() 
         
-        nom_sous_regle_2 = mk_var() 
+        nom_sous_regle_2 = cpt.get() 
         while(nom_sous_regle_2 in d.keys() or nom_sous_regle_2 in keys_base):
-            nom_sous_regle_2 = mk_var() 
+            nom_sous_regle_2 = cpt.get() 
         
-        d[nom_sous_regle_1] = simplif_rule(rule._r1, mk_var, d, keys_base)
-        d[nom_sous_regle_2] = simplif_rule(rule._r2, mk_var, d, keys_base)
+        d[nom_sous_regle_1] = simplif_rule(rule._r1, cpt, d, keys_base)
+        d[nom_sous_regle_2] = simplif_rule(rule._r2, cpt, d, keys_base)
         
         return UnionRule(nom_sous_regle_1, nom_sous_regle_2)
     
     elif t == PROD:
-        nom_sous_regle_1 = mk_var() 
+        nom_sous_regle_1 = cpt.get() 
         while(nom_sous_regle_1 in d.keys() or nom_sous_regle_1 in keys_base):
-            nom_sous_regle_1 = mk_var() 
+            nom_sous_regle_1 = cpt.get() 
         
-        nom_sous_regle_2 = mk_var() 
+        nom_sous_regle_2 = cpt.get() 
         while(nom_sous_regle_2 in d.keys() or nom_sous_regle_1 in keys_base):
-            nom_sous_regle_2 = mk_var() 
+            nom_sous_regle_2 = cpt.get() 
         
-        d[nom_sous_regle_1] = simplif_rule(rule._r1, mk_var, d, keys_base)
-        d[nom_sous_regle_2] = simplif_rule(rule._r2, mk_var, d, keys_base) 
-        return UnionRule(nom_sous_regle_1, nom_sous_regle_2, rule._cons)
+        d[nom_sous_regle_1] = simplif_rule(rule._r1, cpt, d, keys_base)
+        d[nom_sous_regle_2] = simplif_rule(rule._r2, cpt, d, keys_base) 
+        return ProductRule(nom_sous_regle_1, nom_sous_regle_2, rule._cons)
         
     elif t == SINGLETON:
         return SingletonRule(rule._obj)
     
     elif t == EPSILON:
         return EpsilonRule(rule._obj) 
+    elif t == NONTERM:
+        return rule._nom
 
-def virer_nonterm(gram): 
-    pass
-#TODO : Vérifier le non-écrasage de nouvelles règles 
+
+class Cpt():
+    def __init__(self):
+        self.i = 0
+    def get(self):
+        i = self.i 
+        self.i += 1
+        return str(i) 
+
+## Supprime les doublons d'une grammaire donnée 
+def virer_doublons(g):
+    pass 
+### Simplifie les règles de la grammaire complexe donnée en paramètre 
 def simplify_grammar(cond_g):
+
+    # 2. Création de la grammaire simple
     new_gram = dict()
-    cpt_regle = 0
-    
-    def mk_str_rule():
-        x = cpt_regle
-        cpt_regle += 1
-        return str(x) 
-    
+    cpt = Cpt()
     base_keys = set(cond_g.keys())
     
+    # Simplification des règles 
     for rule_name in base_keys:
-        new_gram[rule_name] = simplif_rule(cond_g[rule_name], mk_str_rule, new_gram, base_keys)
+        new_gram[rule_name] = simplif_rule(cond_g[rule_name], cpt, new_gram, base_keys)
     
     return new_gram
+    
