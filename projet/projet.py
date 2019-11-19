@@ -375,7 +375,7 @@ class EpsilonRule(ConstantRule):
 class Bad_grammar(Exception):
     pass
     
-""" 
+"""
 Dit si une grammaire donnée est correcte, id est 
  vérifie que chaque règle référencée existe bien dans la grammaire 
  Rend True si la grammaire est correctement formée dans cette mesure 

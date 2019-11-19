@@ -1,6 +1,6 @@
 # coding=utf8
 from projet import * 
-N = 100
+N = 1000
 print("Création des grammaires") 
 class Node: 
     def __init__(self, a, b):
@@ -13,13 +13,31 @@ class Node:
             return "Node( " + str(self.sag) + ", " + str(self.sad) + " )" 
     def __eq__(self, other):
         return str(self) == str(other)
-            
+    def size(self):
+        if sag is None: 
+            return 1 
+        else:
+            return sag.size() + sad.size() 
+
 
 Leaf = Node(None, None)        
 
-
-treeGram = {"Tree" : UnionRule("Node", "Leaf"),
-            "Node" : ProductRule("Tree", "Tree", lambda a, b : Node(a, b)),
+## Les deux arbres sont de même taille
+def compare_trees(t1, t2): 
+    if t1.sad == None: # Si c'est une feuille, l'autre est une feuille 
+        return 0
+    size_sag1 = t1.sag.size()
+    size_sag2 = t2.sag.size() 
+    if(size_sag1 - size_sag2 != 0):
+        return size_sag1 - size_sag2 
+    comp_sag = compare_trees(t1.sag, t2.sag)
+    if(comp_sag != 0):
+        return comp_sag 
+    else:
+        return compare_trees(t1.sad, t2.sad) 
+    
+treeGram = {"Tree" : UnionRule("Node", "Leaf", cmp = compare_trees) , # A
+            "Node" : ProductRule("Tree", "Tree", lambda a, b : Node(a, b), dest = lambda t : (t.sag, t.sad), size = lambda t : t.size() ),
             "Leaf" : SingletonRule(Leaf)}
 
 
@@ -140,6 +158,7 @@ for g, rn in grams :
 ### Grammaires compliquées ###
 ##############################
 print("Tests de simplification de grammaires compliquées") 
+raise Exception("La suite du programme a une boucle infinie, donc je l'arrête là")
 cg1 = { "Tree" : Union(Singleton(Leaf),
                  Prod( NonTerm("Tree"), NonTerm("Tree"), 
                  lambda a, b : Node(a,b)))} 
