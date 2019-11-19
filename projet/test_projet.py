@@ -46,9 +46,44 @@ assert(treeGram["Tree"].count(1) == 1)
 assert(treeGram["Tree"].count(4) == 5)
 assert(fiboGram["Fib"].count(3) == 5)
 assert(fiboGram["Fib"].count(6) == 21)
+"""
+print("Ecriture des count de fiboGram") 
+l = list(fiboGram.keys())
+print((" & ".join(l)) + r" \\ " + '\n') 
+s = ""
+for i in range(11):
+    s = s + str(i)
+    for key in l:
+        r = fiboGram[key]
+        if not isinstance(r, ConstructorRule):
+            continue 
+        s = s + ' & ' + str(r.count(i)) 
+    s = s + r' \\' + ' \n ' 
+print(s) 
 
+print("Test des count de Tree")
+print("Ecriture des count de treeGram") 
+l = list(treeGram.keys())
+for i in l:
+    if not isinstance(treeGram[i], ConstructorRule):
+        l.remove(i) 
 
+        
+print(" n & " +(" & ".join(l)) + r" \\ \hline " + '\n') 
+s = ""
+for i in range(11):
+    s = s + str(i)
+    for key in l:
+        r = treeGram[key]
+        if not isinstance(r, ConstructorRule):
+            continue 
+        s = s + ' & ' + str(r.count(i)) 
+    s = s + r' \\' + ' \n ' 
+print(s) 
+raise WTFexception
+"""
 
+        
 print("Test d'égalité entre la longueur des listes et count") 
 for i in range(10):
     for rule_name in treeGram.keys():
@@ -65,14 +100,15 @@ for n in range(6):
 
 print("Comparaison des list et unrank") 
 for n in range(10):
-    g = treeGram 
-    nom_regles = g.keys()
-    for rule_name in nom_regles:
-        rule = g[rule_name]
-        l = rule.list(n)
-        for rank in range(rule.count(n)):
-            assert(str(l[rank]) == str(rule.unrank(n, rank)))
-
+    tab =  [treeGram, fiboGram]
+    for g in tab:
+        nom_regles = g.keys()
+        for rule_name in nom_regles:
+            rule = g[rule_name]
+            l = rule.list(n)
+            for rank in range(rule.count(n)):
+                assert(str(l[rank]) == str(rule.unrank(n, rank)))
+        
 
 ##############################
 ### Grammaires compliquées ###

@@ -11,15 +11,19 @@ class InvalidGrammar(Exception):
         self._s = s
 
 class AbstractRule:
+
     def __init__(self):
         self._grammar = dict()
 
     def set_grammar(self, g):
         self._grammar = g
+
     def count(self, n):
         raise NotImplementedError
+
     def list(self, n):
         raise NotImplementedError
+
     def unrank(self, n, rank):
         raise NotImplementedError
     
@@ -28,10 +32,15 @@ class AbstractRule:
     
     def random(self, n):
         raise NotImplementedError
-        
+    
+    def rank(self, obj):
+        raise NotImplementedError
+
 class ConstructorRule(AbstractRule):
     def __init__(self):
         self._parameters = None
+        self._fst = None
+        self._snd = None 
         self._valuation = None
         self._cache = dict() 
 
@@ -55,8 +64,6 @@ class ConstructorRule(AbstractRule):
     def random(self, n):
         return self.unrank(n, random.randint(self.count(n)))
     
-
-# parameters ?= (fst snd) 
 class UnionRule(ConstructorRule):
 
 
@@ -301,6 +308,29 @@ class EpsilonRule(ConstantRule):
     def __str__(self):
         return "eps" 
 
+class Bad_grammar(Exception):
+    pass
+    
+""" 
+Dit si une grammaire donnée est correcte, id est 
+ vérifie que chaque règle référencée existe bien dans la grammaire 
+ Rend True si la grammaire est correctement formée dans cette mesure 
+ False sinon 
+"""
+def is_correct(g): 
+    k = g.keys() 
+    def f(r):
+        if isinstance(r, CondensedRule) and ((r._fst not in k) or (r._snd not in k)):
+            raise Bad_grammar
+        else: # rien à faire dans ce cas 
+            pass 
+    try:
+        for r in k:
+            f(r) 
+        return true 
+    except Bad_grammar:
+        return false
+
 """ Initialise une grammaire 
     Vérifier qu'aucun des count ne reste à l'infini ? 
 """
@@ -318,9 +348,8 @@ def init_grammar(g):
             rule = g[key]
             b = b or rule._update_valuation()
             # TODO : vérifier qu'aucune règle n'est à max_int 
-            
-            
-            
+
+
 #############################
 ### Grammaires condensées ###
 #############################
@@ -360,56 +389,6 @@ class NonTerm(CondensedRule):
     def __init__(self, nom_regle):
         self.type = NONTERM
         self._nom = nom_regle
-    
-### Ajoute un équivalent de la règle de grammaire "compliquée" 
-### donnée en paramètre pour ajouter une ou plusieurs règles équivalentes
-### dans le dictionnaire d donné en paramètre
-### paramètres  : 
-### rule : CondensedRule - La règle à "traduire" 
-### mk_var : () -> str - une fonction de création de noms de règles
-### d : dict(str -> AbstractRule) - Le dictionnaire où l'on traduit 
-### keys_base : set(str) - La liste des règles dans la CondensedRule, pour 
-###     ne pas créer de règles avec des noms déjà existants
-def simplif_rule(rule, cpt, d, keys_base):
-    t = rule.type
-    
-    # switch du pauvre 
-    if t == UNION:
-
-        nom_sous_regle_1 = cpt.get() 
-        while(nom_sous_regle_1 in d.keys() or nom_sous_regle_1 in keys_base):
-            nom_sous_regle_1 = cpt.get() 
-        
-        nom_sous_regle_2 = cpt.get() 
-        while(nom_sous_regle_2 in d.keys() or nom_sous_regle_2 in keys_base):
-            nom_sous_regle_2 = cpt.get() 
-        
-        d[nom_sous_regle_1] = simplif_rule(rule._r1, cpt, d, keys_base)
-        d[nom_sous_regle_2] = simplif_rule(rule._r2, cpt, d, keys_base)
-        
-        return UnionRule(nom_sous_regle_1, nom_sous_regle_2)
-    
-    elif t == PROD:
-        nom_sous_regle_1 = cpt.get() 
-        while(nom_sous_regle_1 in d.keys() or nom_sous_regle_1 in keys_base):
-            nom_sous_regle_1 = cpt.get() 
-        
-        nom_sous_regle_2 = cpt.get() 
-        while(nom_sous_regle_2 in d.keys() or nom_sous_regle_1 in keys_base):
-            nom_sous_regle_2 = cpt.get() 
-        
-        d[nom_sous_regle_1] = simplif_rule(rule._r1, cpt, d, keys_base)
-        d[nom_sous_regle_2] = simplif_rule(rule._r2, cpt, d, keys_base) 
-        return ProductRule(nom_sous_regle_1, nom_sous_regle_2, rule._cons)
-        
-    elif t == SINGLETON:
-        return SingletonRule(rule._obj)
-    
-    elif t == EPSILON:
-        return EpsilonRule(rule._obj) 
-    elif t == NONTERM:
-        return rule._nom
-
 
 class Cpt():
     def __init__(self):
@@ -417,23 +396,57 @@ class Cpt():
     def get(self):
         i = self.i 
         self.i += 1
-        return str(i) 
+        return ("rule" + str(i)) 
+
+    
+### Ajoute un équivalent de la règle de grammaire "compliquée" 
+### donnée en paramètre pour ajouter une ou plusieurs règles équivalentes
+### dans le dictionnaire d donné en paramètre
+### paramètres  : 
+### rule : CondensedRule - La règle à "traduire" 
+### - une fonction de création de noms de règles
+### d : dict(str -> AbstractRule) - Le dictionnaire où l'on traduit 
+### keys_base : set(str) - La liste des règles dans la CondensedRule, pour 
+###     ne pas créer de règles avec des noms déjà existants
+def simplif_rule(rule, cpt, d, keys_base):
+    t = rule.type
+    
+    if t == NONTERM:
+        return rule._nom
+    
+    new_rule_name = cpt.get()
+    while(new_rule_name in d.keys() or new_rule_name in keys_base):
+        new_rule_name = cpt.get()   
+    
+    if t == PROD:
+        nom_sr1 = simplif_rule(rule._r1, cpt, d, keys_base)
+        nom_sr2 = simplif_rule(rule._r2, cpt, d, keys_base)
+        d[new_rule_name] = ProductRule(nom_sr1, nom_sr2, rule._cons) 
+    elif t == UNION:
+        nom_sr1 = simplif_rule(rule._r1, cpt, d, keys_base)
+        nom_sr2 = simplif_rule(rule._r2, cpt, d, keys_base)
+        d[new_rule_name] = UnionRule(nom_sr1, nom_sr2)
+    elif t == SINGLETON:
+        d[new_rule_name] = SingletonRule(rule._obj)
+    elif t == EPSILON: 
+        d[new_rule_name] = EpsilonRule(rule._obj)
+    else:
+        raise WTFexception
+    return new_rule_name
 
 
-## Supprime les doublons d'une grammaire donnée 
-def virer_doublons(g):
-    pass 
+# todo : fonction de substitution
 ### Simplifie les règles de la grammaire complexe donnée en paramètre 
 def simplify_grammar(cond_g):
-
-    # 2. Création de la grammaire simple
     new_gram = dict()
     cpt = Cpt()
     base_keys = set(cond_g.keys())
     
     # Simplification des règles 
     for rule_name in base_keys:
-        new_gram[rule_name] = simplif_rule(cond_g[rule_name], cpt, new_gram, base_keys)
-    
+        name = simplif_rule(cond_g[rule_name], cpt, new_gram, base_keys)
+        rule = new_gram[name] 
+        del(new_gram[name])
+        new_gram[rule_name] = rule
     return new_gram
-    
+ 
