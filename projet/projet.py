@@ -2,6 +2,13 @@
 import random
 max_int = 2**100 
 
+
+class Lack_of_fun(Exception):
+    def __init__(self, s):
+        self._msg = s 
+    def __str__(self):
+        return "Lack_of_fun exception : " + self._msg
+
 class WTFexception(Exception):
     def __init__(self, s):
         self._s = s
@@ -33,9 +40,10 @@ class AbstractRule:
     def random(self, n):
         raise NotImplementedError
     
-    def rank(self, obj):
+    def rank(self, n, obj):
         raise NotImplementedError
 
+    
 class ConstructorRule(AbstractRule):
     def __init__(self):
         self._parameters = None
@@ -66,13 +74,18 @@ class ConstructorRule(AbstractRule):
     
 class UnionRule(ConstructorRule):
 
-
-    def __init__(self, fst, snd):
+    """
+        cmp(a, b) < 0 si a < b 
+    """
+    def __init__(self, fst, snd, cmp = None):
         self._valuation = max_int
         self._fst = fst
         self._snd = snd
         self._parameters = (fst, snd)
         self._cache = dict()
+        self._cmp = cmp
+  
+    
     """ Rend True si la valeur a été mise à jour
         False sinon
     """
@@ -105,8 +118,20 @@ class UnionRule(ConstructorRule):
             else: 
                 return r2.unrank(n, rank - c1)
 
-    ## Problème : Si une règle union s'auto référence, ça peut
-    ## boucler indéfiniment (enfin peut-être, je suis pas vraiment sûr) 
+    def rank(self, n, obj):
+        if self._cmp is None:
+            raise Lack_of_fun("Union : La fonction de comparaison entre deux objets n'est pas définie") 
+        else: 
+            if(self._grammar[self._snd].count(n) == 0):
+                return self._grammar[self._fst].rank(n, obj) 
+            premier_elt_snd = self._fst.unrank(n, 0)
+            if self._cmp(premier_elt_snd, obj) < 0: # obj > premier_elt_snd => Dans le second ensemble => 
+                return self._grammar[self._fst].count(n) + self._grammar[self._snd].rank(n, obj)
+            else :
+                return self._grammar[self._fst].rank(n, obj)
+            
+    ## Problème : S'il existe un cycle qui revient vers la règle courante, ça peut
+    ## boucler indéfiniment 
     def list(self, n):
         r1 = self._grammar[self._fst].list(n)
         r2 = self._grammar[self._snd].list(n)
@@ -115,20 +140,24 @@ class UnionRule(ConstructorRule):
     def __str__(self):
         return "(" + self._fst + " | " + self._snd + " )" 
     
+
+## Dest : Détruit un objet en deux sous objets 
+## Size : calcule la taille d'un objet
 class ProductRule(ConstructorRule):
-    def __init__(self, fst, snd, cons):
+    def __init__(self, fst, snd, cons, dest=None, size=None):
         self._fst = fst
         self._snd = snd
         self._cons= cons
         self._valuation = max_int
         self._cache = dict() 
-        
+        self._dest = None
+        self._size = None
 
     def _update_valuation(self):
         v1 = self._grammar[self._fst].valuation()
         v2 = self._grammar[self._snd].valuation()
         oldv = self._valuation
-        self._valuation = v1 + v2
+        self._valuation = min(max_int, v1 + v2)
         assert(oldv >= self._valuation)
         return(oldv > self._valuation)
 
@@ -225,6 +254,29 @@ class ProductRule(ConstructorRule):
                     ret.append(self._cons(e1, e2))
         return ret
 
+    def rank(self, n, obj): 
+        if self._dest is None:
+            raise Lack_of_fun("Pas de destructeur donc pas de rank") 
+        elif self._size is None:
+            raise Lack_of_fun("Pas de calculateur de taille de l'objet")
+        r1 = self._grammar[self._fst]
+        r2 = self._grammar[self._snd] 
+        
+        
+        (obj1, obj2) = self._dest(obj)
+        size1 = self._size(obj1)
+        size2 = self._size(obj2)
+        
+        rang1 = r1.rank(size1, obj1)
+        rang2 = r2.rank(size2, obj2) 
+        
+        count1 = r1.count(size1)
+        count2 = r2.count(size2) 
+        
+        final_rank = count2 * rang1 + rang2 
+        
+        return final_rank 
+
     def __str__(self):
         return "( " + self._fst + " x " + self._snd + " )" 
 
@@ -269,6 +321,11 @@ class SingletonRule(ConstantRule):
     def __str__(self):
         return str(self._object)
     
+    def rank(self, n, obj):
+        if obj == self._obj and n == 1:
+            return 0
+        else raise ValueError 
+        
     def random(self, n, rank):
         if n == 1 and rank == 0:
             return self._object
@@ -299,6 +356,13 @@ class EpsilonRule(ConstantRule):
         else:
             return self._object
     
+    def rank(self, n, obj):
+        if n == 0 and obj == self._obj : 
+            return 0
+        else :
+            raise ValueError
+
+            
     # a voir
     def list(self, n):
         if n == 0:

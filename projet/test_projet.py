@@ -1,6 +1,6 @@
 # coding=utf8
 from projet import * 
-
+N = 100
 print("Création des grammaires") 
 class Node: 
     def __init__(self, a, b):
@@ -11,11 +11,12 @@ class Node:
             return "Leaf"
         else:
             return "Node( " + str(self.sag) + ", " + str(self.sad) + " )" 
-    
+    def __eq__(self, other):
+        return str(self) == str(other)
+            
+
 Leaf = Node(None, None)        
 
-## Todo : ajouter la bonne définition d'arbre binaire, 
-# comme vu au dernier tp 
 
 treeGram = {"Tree" : UnionRule("Node", "Leaf"),
             "Node" : ProductRule("Tree", "Tree", lambda a, b : Node(a, b)),
@@ -85,9 +86,11 @@ raise WTFexception
 
         
 print("Test d'égalité entre la longueur des listes et count") 
+i = 0
 for i in range(10):
     for rule_name in treeGram.keys():
         assert( len(treeGram[rule_name].list(i)) == treeGram[rule_name].count(i))
+    i += 1 
     for rule_name in fiboGram.keys():
         assert( len(fiboGram[rule_name].list(i)) == fiboGram[rule_name].count(i))
 
@@ -99,6 +102,7 @@ for n in range(6):
 
 
 print("Comparaison des list et unrank") 
+
 for n in range(10):
     tab =  [treeGram, fiboGram]
     for g in tab:
@@ -108,20 +112,61 @@ for n in range(10):
             l = rule.list(n)
             for rank in range(rule.count(n)):
                 assert(str(l[rank]) == str(rule.unrank(n, rank)))
-        
+
+
+
+##############################
+#####  "Tests complets"  #####
+##############################
+
+
+print("Tests complets")
+
+grams = [(treeGram,"Tree"),(fiboGram, "Fib")]
+for g, rn in grams : 
+    print(rn) 
+    n = 0
+    r = g[rn] 
+    while(r.count(n) < N): 
+        print(n)
+        l = r.list(n)
+        for i in range(len(l)):
+            ur = r.unrank(n, i)
+            assert(ur == l[i])
+        assert(len(l) == r.count(n))
+        n += 1
 
 ##############################
 ### Grammaires compliquées ###
 ##############################
-
 print("Tests de simplification de grammaires compliquées") 
-
-cg1 = { "Tree" : Union(Singleton(Leaf), 
+cg1 = { "Tree" : Union(Singleton(Leaf),
                  Prod( NonTerm("Tree"), NonTerm("Tree"), 
-                 lambda a, b : "".join([a,b]))) } 
+                 lambda a, b : Node(a,b)))} 
 
-simplified_tree = simplify_grammar(cg1)
 
-print("--- Simplification de la grammaire des arbres ---") 
-for rule in simplified_tree.keys():    
-    print('"', rule,'"', " :\t" , simplified_tree[rule])
+simplified_treeGram = simplify_grammar(cg1)
+print("##Grammaire simplifiée##")
+for k in simplified_treeGram.keys():
+    r = simplified_treeGram[k]
+    print(k, '\t', str(r))
+
+
+init_grammar(simplified_treeGram)
+
+r = treeGram["Tree"]
+rsimp = simplified_treeGram["Tree"] 
+
+for n in range(6):
+    print(n) 
+    print("Count")
+    assert(r.count(n) == rsimp.count(n))
+    print("Génération des listes")
+    lsimp = rsimp.list(i)
+    l = r.list(i)
+    assert (len(l) == len(lsimp))
+    print("Test sur les listes") 
+    for i in range(len(l)):
+        assert(l[i] == lsimp[i]) 
+        assert(l[i] == rsimp.unrank(n, i))
+        
