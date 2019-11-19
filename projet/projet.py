@@ -292,8 +292,7 @@ class ConstantRule(AbstractRule):
     
     def _calc_valuation(self):
         pass
-    
- 
+     
 class SingletonRule(ConstantRule):
     def __init__(self, obj):
         self._object = obj
@@ -374,7 +373,8 @@ class EpsilonRule(ConstantRule):
 
 class Bad_grammar(Exception):
     pass
-    
+
+
 """
 Dit si une grammaire donnée est correcte, id est 
  vérifie que chaque règle référencée existe bien dans la grammaire 
@@ -422,6 +422,7 @@ PROD = 1
 SINGLETON = 2  
 EPSILON = 3
 NONTERM = 4
+SEQUENCE = 5 
 
 class CondensedRule():
     pass
@@ -453,6 +454,13 @@ class NonTerm(CondensedRule):
     def __init__(self, nom_regle):
         self.type = NONTERM
         self._nom = nom_regle
+
+class Sequence(CondensedRule):
+    def __init__(self, nonterm, casvide, cons):
+        self.nonterm = nonterm
+        self.casvide = casvide
+        self.cons = cons 
+        self.type = SEQUENCE 
 
 class Cpt():
     def __init__(self):
@@ -494,6 +502,10 @@ def simplif_rule(rule, cpt, d, keys_base):
         d[new_rule_name] = SingletonRule(rule._obj)
     elif t == EPSILON: 
         d[new_rule_name] = EpsilonRule(rule._obj)
+    elif t == SEQUENCE:
+        sr1 = Epsilon(rule.casvide)
+        sr2 = Prod(new_rule_name, rule.nonterm , rule.cons)
+        d[new_rule_name] = UnionRule(simplif_rule(sr1, cpt, d, keys_base), simplif_rule(sr2, cpt, d, keys_base))
     else:
         raise WTFexception
     return new_rule_name

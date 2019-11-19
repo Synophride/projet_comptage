@@ -65,42 +65,41 @@ assert(treeGram["Tree"].count(1) == 1)
 assert(treeGram["Tree"].count(4) == 5)
 assert(fiboGram["Fib"].count(3) == 5)
 assert(fiboGram["Fib"].count(6) == 21)
-"""
-print("Ecriture des count de fiboGram") 
-l = list(fiboGram.keys())
-print((" & ".join(l)) + r" \\ " + '\n') 
-s = ""
-for i in range(11):
-    s = s + str(i)
-    for key in l:
-        r = fiboGram[key]
-        if not isinstance(r, ConstructorRule):
-            continue 
-        s = s + ' & ' + str(r.count(i)) 
-    s = s + r' \\' + ' \n ' 
-print(s) 
+
+def write_fibogram():
+    print("Ecriture des count de fiboGram") 
+    l = list(fiboGram.keys())
+    print((" & ".join(l)) + r" \\ " + '\n') 
+    s = ""
+    for i in range(11):
+        s = s + str(i)
+        for key in l:
+            r = fiboGram[key]
+            if not isinstance(r, ConstructorRule):
+                continue 
+            s = s + ' & ' + str(r.count(i)) 
+        s = s + r' \\' + ' \n ' 
+    print(s) 
 
 print("Test des count de Tree")
-print("Ecriture des count de treeGram") 
-l = list(treeGram.keys())
-for i in l:
-    if not isinstance(treeGram[i], ConstructorRule):
-        l.remove(i) 
+def write_treeGram():
+    print("Ecriture des count de treeGram") 
+    l = list(treeGram.keys())
+    for i in l:
+        if not isinstance(treeGram[i], ConstructorRule):
+            l.remove(i)
+    print(" n & " +(" & ".join(l)) + r" \\ \hline " + '\n') 
+    s = ""
+    for i in range(11):
+        s = s + str(i)
+        for key in l:
+            r = treeGram[key]
+            if not isinstance(r, ConstructorRule):
+                continue 
+            s = s + ' & ' + str(r.count(i)) 
+        s = s + r' \\' + ' \n ' 
+    print(s) 
 
-        
-print(" n & " +(" & ".join(l)) + r" \\ \hline " + '\n') 
-s = ""
-for i in range(11):
-    s = s + str(i)
-    for key in l:
-        r = treeGram[key]
-        if not isinstance(r, ConstructorRule):
-            continue 
-        s = s + ' & ' + str(r.count(i)) 
-    s = s + r' \\' + ' \n ' 
-print(s) 
-raise WTFexception
-"""
 
         
 print("Test d'égalité entre la longueur des listes et count") 
