@@ -185,8 +185,9 @@ class UnionRule(ConstructorRule):
           Le nom de la première sous-règle 
         snd : str 
           Le nom de la seconde  sous-règle
-        cmp : obj -> obj -> bool  
-          Fonction permettant de comparer deux objets générés
+        cmp : obj -> obj -> int
+          Fonction permettant de comparer deux objets générés, qui rend un nombre négatif quelconque
+         si le premier objet est plus petit que le second
 
         """
         self._valuation = max_int
@@ -194,8 +195,7 @@ class UnionRule(ConstructorRule):
         self._snd = snd
         self._parameters = (fst, snd)
         self._cache = dict() # Cache
-        if cmp is not None:
-            self._cmp = cmp
+        self._cmp = cmp
   
 
     def _update_valuation(self):
@@ -225,16 +225,17 @@ class UnionRule(ConstructorRule):
     def unrank(self, n, rank):
         if(rank >= self.count(n)):
             raise ValueError("count = " + str(self.count(n)) +"\t rank = " + str(rank))  
-        else: 
+        else:
+            
             r1 = self._grammar[self._fst]
             c1 = r1.count(n)
             
-            r2 = self._grammar[self._snd] 
-            c2 = r2.count(n)
+
             
             if(rank < c1):
                 return r1.unrank(n, rank)
-            else: 
+            else:
+                r2 = self._grammar[self._snd] 
                 return r2.unrank(n, rank - c1)
 
     def rank(self, n, obj):
@@ -243,12 +244,17 @@ class UnionRule(ConstructorRule):
         else:
             count_snd = self._grammar[self._snd].count(n)
             count_fst = self._grammar[self._fst].count(n)
-            if(count_snd == 0):
+            
+            if(count_snd == 0): # Si le second ensemble est de taille 0,
+                # alors ça revient à chercher uniquement dans le premier
                 return self._grammar[self._fst].rank(n, obj)
             
-            premier_elt_snd = self._grammar[self._snd].unrank(n, 0)
-            if self._cmp(premier_elt_snd, obj) < 0: # obj > premier_elt_snd => Dans le second ensemble => 
-                return self._grammar[self._fst].count(n) + self._grammar[self._snd].rank(n, obj)
+            premier_elt_snd = self._grammar[self._snd].unrank(n, 0) # Sinon, on prend le premier élément du second ensemble
+            if self._cmp(premier_elt_snd, obj) < 0: # On le compare à l'objet dont on veut connaître le rang
+                # Si ce dernier (obj) est plus grand, on cherche dans le second ensemble (et on ajoute tous les éléments du
+                # premier ensemble qui précèdent cet objet) 
+                return self._grammar[self._fst].count(n) + self._grammar[self._snd].rank(n, obj) 
+            
             else :
                 return self._grammar[self._fst].rank(n, obj)
             
@@ -260,7 +266,7 @@ class UnionRule(ConstructorRule):
         return r1 + r2 
         
     def __str__(self):
-        return "(" + self._fst + " | " + self._snd + " )" 
+        return "( " + self._fst + " | " + self._snd + " )" 
     
 
 class ProductRule(ConstructorRule):
@@ -278,7 +284,7 @@ class ProductRule(ConstructorRule):
         cons : obj -> obj -> obj : Fonction permettant de "lier" deux 
           sous-objets pour en créer un troisième
         
-        dest : "destructeur", séparant un objet en deux sous-objets engendrés 
+        dest : obj -> (obj * obj)  "destructeur", qui sépare un objet en deux sous-objets engendrés 
           par chacune des sous-rugles
         size : fonction permettant de calculer la taille d'un objet 
         """
@@ -294,7 +300,7 @@ class ProductRule(ConstructorRule):
         v1 = self._grammar[self._fst].valuation()
         v2 = self._grammar[self._snd].valuation()
         oldv = self._valuation
-        self._valuation = min(max_int, v1 + v2) # Sinon, si les deux SR sont à max_int, ça peut faire foirer le assert
+        self._valuation = min(max_int, v1 + v2) # Sinon, si les deux SR sont à max_int, ça peut faire rater le assert
         assert(oldv >= self._valuation) 
         return(oldv > self._valuation)
 
@@ -394,7 +400,7 @@ class ProductRule(ConstructorRule):
         elif self._size is None:
             raise Lack_of_fun("Pas de calculateur de taille de l'objet")
         
-        assert(self._size(obj) == n)
+        assert(self._size(obj) == n) 
 
         if(self._size(obj) == 1):
             return 0
@@ -403,19 +409,20 @@ class ProductRule(ConstructorRule):
         r2 = self._grammar[self._snd] 
 
         
-        (obj1, obj2) = self._dest(obj)
+        (obj1, obj2) = self._dest(obj) # Récupération des sous-objets par le destructeur
 
-        size1 = self._size(obj1)
+        size1 = self._size(obj1) # Taille des sous-objets
         size2 = self._size(obj2)
         assert(size1 + size2 == n)
-        rang1 = r1.rank(size1, obj1)
+        
+        rang1 = r1.rank(size1, obj1) 
         rang2 = r2.rank(size2, obj2) 
         
         count1 = r1.count(size1)
         count2 = r2.count(size2)
 
         cpt = 0
-        for i in range(size1):
+        for i in range(size1): # On calcule le nombre d'objets précédant les objets de taille (count1, count2) 
             cpt += r1.count(i) * r2.count(n - i)
         
         final_rank = cpt + count2 * rang1 + rang2 
@@ -523,17 +530,11 @@ class Bad_grammar(Exception):
     pass
 
 
-"""
-Dit si une grammaire donnée est correcte, id est 
- vérifie que chaque règle référencée existe bien dans la grammaire 
- Rend True si la grammaire est correctement formée dans cette mesure 
- False sinon 
-"""
 def is_correct(g): 
     """
     Détermine si les règles de la grammaire initialisée sont cohérentes, id est si
     a) les règles qui apparaissent dans les règles existent
-    b) la valuation des terminaux n'est pas égale à max_int
+    b) la valuation des terminaux n'est pas égale à max_int après l'initialisation et la valuation
     """
     k = g.keys() 
     def f(r):
@@ -596,7 +597,8 @@ class Bound(CondensedRule):
         self._min = min
         self._r = _r
         self.type = BOUND
-# TODO : définir fonctions optionnelles en param pour Union et Prodrule
+        
+
 class Union(CondensedRule):
     def __init__(self, r1, r2, cmp = None):
         self._r1 = r1
@@ -605,7 +607,7 @@ class Union(CondensedRule):
         self.type = UNION
 
         
-class Prod(CondensedRule): # Il faudrait peut-être définir les fonctions additionnelles en param
+class Prod(CondensedRule):
     def __init__(self, r1, r2, cons, dest=None, size=None):
         self._r1 = r1
         self._r2 = r2
@@ -710,6 +712,14 @@ def simplif_rule(rule:CondensedRule, cpt:Cpt, d, keys_base):
 def simplify_grammar(cond_g):
     """
     Simplifie la grammaire complexe cond_g en paramètre en une grammaire simple 
+
+    Paramètre:
+    ----------
+    cond_g : dict(str -> CondensedRule)
+    
+    Retour:
+    -------
+    dict(str->AbstractRule)  Une grammaire simplifiée
     """
     new_gram = dict() # Dictionnaire retour : str -> AbstractRule
     cpt = Cpt() # Génération de noms de règles
