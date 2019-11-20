@@ -1,30 +1,54 @@
 # coding=utf8
+
 from projet import * 
-N = 1000
-print("Création des grammaires") 
-class Node: 
+
+N = 100
+
+
+class Node:
+    """
+    Classe représentant un arbre. 
+    On part du principê que chaque noeud possède zéro ou deux sous-arbres.
+    """
     def __init__(self, a, b):
         self.sag = a 
         self.sad = b
+
     def __str__(self):
         if self.sag == None:
             return "Leaf"
         else:
             return "Node( " + str(self.sag) + ", " + str(self.sad) + " )" 
+
     def __eq__(self, other):
         return str(self) == str(other)
+
     def size(self):
-        if sag is None: 
+        if self.sag is None: 
             return 1 
         else:
-            return sag.size() + sad.size() 
+            return self.sag.size() + self.sad.size() 
+
+Leaf = Node(None, None)
 
 
-Leaf = Node(None, None)        
-
-## Les deux arbres sont de même taille
-def compare_trees(t1, t2): 
-    if t1.sad == None: # Si c'est une feuille, l'autre est une feuille 
+def compare_trees(t1, t2):
+    """ Fonction de comparaison entre deux arbres t1 et t2
+    
+    Paramètres:
+    -----------
+    t1, t2 : Node 
+        Les deux arbres à comparer. Les arbres sont complets, c'est à dire
+      qu'ils ont soit zéro fils, soit deux fils.
+    
+    Retour:
+    -------
+    Un nombre négatif quelconque si t1 < t2. 
+    0 si t1 = t2
+    Un nombre positif si t1 > t2 
+    
+    """
+    if t1.sad == None: # Si c'est une feuille, l'autre sous-arbre est une feuille 
         return 0
     size_sag1 = t1.sag.size()
     size_sag2 = t2.sag.size() 
@@ -35,9 +59,16 @@ def compare_trees(t1, t2):
         return comp_sag 
     else:
         return compare_trees(t1.sad, t2.sad) 
-    
-treeGram = {"Tree" : UnionRule("Node", "Leaf", cmp = compare_trees) , # A
-            "Node" : ProductRule("Tree", "Tree", lambda a, b : Node(a, b), dest = lambda t : (t.sag, t.sad), size = lambda t : t.size() ),
+
+
+print("Déclaration des grammaires") 
+
+treeGram = {"Tree" : UnionRule("Node", "Leaf", cmp = compare_trees) , 
+            "Node" : ProductRule("Tree",
+                                 "Tree",
+                                 lambda a, b : Node(a, b),
+                                 dest = lambda t : (t.sag, t.sad),
+                                 size = lambda t : t.size() ),
             "Leaf" : SingletonRule(Leaf)}
 
 
@@ -50,16 +81,17 @@ fiboGram = { "Fib" : UnionRule("Vide", "Cas1"),
              "AtomB": SingletonRule("B"),
              "CasBAu": ProductRule("AtomB", "CasAu", (lambda a,b : "".join([a,b])) )}
 
-print("initialisation des grammaires") 
+print("Initialisation des grammaires") 
 
-init_grammar(treeGram) 
+init_grammar(treeGram)
 init_grammar(fiboGram)
 
-failed_tests = [] 
+
 print("Test de la valuation des grammaires")
 assert(treeGram["Tree"].valuation() == 1)
-assert(treeGram["Tree"].valuation() == 1)
-    
+assert(fiboGram["Fib"].valuation() == 0)
+
+
 print("Test des count")
 assert(treeGram["Tree"].count(1) == 1)
 assert(treeGram["Tree"].count(4) == 5)
@@ -67,6 +99,12 @@ assert(fiboGram["Fib"].count(3) == 5)
 assert(fiboGram["Fib"].count(6) == 21)
 
 def write_fibogram():
+    """ 
+    Fonction écrivant le nombre de mots de taille 'n'
+    dérivant de chaque non-terminal 
+    de fiboGram, de sorte à pouvoir copier-coller le résultat 
+    dans un tableau LaTeX
+    """
     print("Ecriture des count de fiboGram") 
     l = list(fiboGram.keys())
     print((" & ".join(l)) + r" \\ " + '\n') 
@@ -81,8 +119,14 @@ def write_fibogram():
         s = s + r' \\' + ' \n ' 
     print(s) 
 
-print("Test des count de Tree")
+
 def write_treeGram():
+    """ 
+    Fonction écrivant le nombre de mots de taille 'n'
+    dérivant de chaque non-terminal 
+    de treeGram, de sorte à pouvoir copier-coller le résultat 
+    dans un tableau LaTeX
+    """
     print("Ecriture des count de treeGram") 
     l = list(treeGram.keys())
     for i in l:
@@ -100,18 +144,14 @@ def write_treeGram():
         s = s + r' \\' + ' \n ' 
     print(s) 
 
-
-        
 print("Test d'égalité entre la longueur des listes et count") 
-i = 0
-for i in range(10):
+for i in range(11):
     for rule_name in treeGram.keys():
         assert( len(treeGram[rule_name].list(i)) == treeGram[rule_name].count(i))
-    i += 1 
     for rule_name in fiboGram.keys():
         assert( len(fiboGram[rule_name].list(i)) == fiboGram[rule_name].count(i))
 
-print("Test des listes") 
+print("Test des listes")
 for n in range(6):
     print("  pour n = ", n) 
     for t in treeGram["Tree"].list(n):
@@ -119,7 +159,6 @@ for n in range(6):
 
 
 print("Comparaison des list et unrank") 
-
 for n in range(10):
     tab =  [treeGram, fiboGram]
     for g in tab:
@@ -133,12 +172,11 @@ for n in range(10):
 
 
 ##############################
-#####  "Tests complets"  #####
+#####  Tests «complets»  #####
 ##############################
 
 
 print("Tests complets")
-
 grams = [(treeGram,"Tree"),(fiboGram, "Fib")]
 for g, rn in grams : 
     print(rn) 
@@ -153,18 +191,26 @@ for g, rn in grams :
         assert(len(l) == r.count(n))
         n += 1
 
+for n in range(12):
+    l = treeGram["Tree"].list(n)
+    for i in range(len(l)):       
+        rk = treeGram["Tree"].rank(n, l[i]) # Pas énormément de tests sur la fonction rank() car fonctions assez contraignantes 
+        assert(i == rk) 
 ##############################
 ### Grammaires compliquées ###
 ##############################
+
 print("Tests de simplification de grammaires compliquées") 
-raise Exception("La suite du programme a une boucle infinie, donc je l'arrête là")
+
 cg1 = { "Tree" : Union(Singleton(Leaf),
                  Prod( NonTerm("Tree"), NonTerm("Tree"), 
                  lambda a, b : Node(a,b)))} 
 
 
 simplified_treeGram = simplify_grammar(cg1)
-print("##Grammaire simplifiée##")
+
+print("Affichage de la grammaire simplifiée")
+
 for k in simplified_treeGram.keys():
     r = simplified_treeGram[k]
     print(k, '\t', str(r))
@@ -175,12 +221,13 @@ init_grammar(simplified_treeGram)
 r = treeGram["Tree"]
 rsimp = simplified_treeGram["Tree"] 
 
+raise Exception("La suite du programme a une boucle infinie, donc je l'arrête là pour l'instant")
 for n in range(6):
     print(n) 
     print("Count")
     assert(r.count(n) == rsimp.count(n))
     print("Génération des listes")
-    lsimp = rsimp.list(i)
+    lsimp = rsimp.list(i) # <<< Cette ligne là boucle indéfiniment. 
     l = r.list(i)
     assert (len(l) == len(lsimp))
     print("Test sur les listes") 

@@ -2,26 +2,17 @@
 import random
 max_int = 2**100 
 
-"""
-Exception indiquant que les fonctions n'ont pas été données  en paramètre
-aux règles de type UnionRule ou ProdRule, ce qui ne permet pas de calculer 
-le rang d'un objet parmi une grammaire donnée. 
-"""
-class Lack_of_fun(Exception):
+class Lack_of_fun(Exception): 
+    """
+    Exception indiquant que les fonctions n'ont pas été données  en paramètre
+    aux règles de type UnionRule ou ProdRule, ce qui ne permet pas de calculer 
+    le rang d'un objet parmi une grammaire donnée. 
+    """
     def __init__(self, s):
         self._msg = s 
     def __str__(self):
         return "Lack_of_fun exception : " + self._msg
 
-## Todo : enlever cette exception
-class WTFexception(Exception):
-    def __init__(self, s):
-        self._s = s
-
-# TODO Remplacer ça par une ValueError ? 
-class InvalidGrammar(Exception):
-    def __init__(self, s):
-        self._s = s
 
 
 # Représente une règle grammaticale abstraite
@@ -118,9 +109,8 @@ class ConstructorRule(AbstractRule):
     def valuation(self):
         return self._valuation 
 
-    # Le cache est un simple dictionnaire python.
-    # Cette méthode est commune aux deux
-    # sous-classes. 
+    # Le «cache» est un simple dictionnaire python.
+    # Cette méthode est commune aux deux sous-classes.
     def count(self, n):
         if n in self._cache:
             return self._cache[n]
@@ -128,11 +118,12 @@ class ConstructorRule(AbstractRule):
             val = self._count(n) 
             self._cache[n] = val 
             return val
-
     
     def _count(self, n):
-        """ Fonction calculant le résultat de count(self,n) 
-        si ce dernier n'a pas été trouvé dans le cache """ 
+        """ 
+        Fonction calculant le résultat de count(self,n) 
+        si ce dernier n'a pas été trouvé dans le cache
+        """ 
         raise NotImplementedError
 
     def _update_valuation(self):
@@ -140,7 +131,45 @@ class ConstructorRule(AbstractRule):
 
     def random(self, n):
         return self.unrank(n, random.randint(self.count(n)))
-    
+
+class BoundRule(ConstructorRule):
+    def __init__(self, r, minimum, maximum):
+        self._r = r
+        self._min = minimum
+        self._max = maximum
+        self._valuation = max_int
+        
+    def _count(self, n):
+        if(n < self._min or n > self._max):
+            return 0
+        else:
+            return self._grammar[self._r].count(n)
+
+    def list(self, n):
+        if(n < self._min or n > self._max):
+            return []
+        else:
+            return self._grammar[self._r].list(n)
+
+    def rank(self, n, obj):
+        if(n < self._min or n > self._max):
+            raise ValueError
+        else:
+            return self._grammar[self._r].rank(n, obj)
+
+        
+    def unrank(self, n, rank):
+        if(n < self._min or n > self._max):
+            raise ValueError
+        else:
+            return self._grammar[self._r].unrank(n, rank)
+
+        
+    def _update_valuation():
+        raise NotImplementedError
+        return False
+
+        
 class UnionRule(ConstructorRule):
     """
     Représente une règle grammaticale de la forme G = A | B 
@@ -211,10 +240,13 @@ class UnionRule(ConstructorRule):
     def rank(self, n, obj):
         if self._cmp is None:
             raise Lack_of_fun("Union : La fonction de comparaison entre deux objets n'est pas définie") 
-        else: 
-            if(self._grammar[self._snd].count(n) == 0): 
-                return self._grammar[self._fst].rank(n, obj) 
-            premier_elt_snd = self._fst.unrank(n, 0)
+        else:
+            count_snd = self._grammar[self._snd].count(n)
+            count_fst = self._grammar[self._fst].count(n)
+            if(count_snd == 0):
+                return self._grammar[self._fst].rank(n, obj)
+            
+            premier_elt_snd = self._grammar[self._snd].unrank(n, 0)
             if self._cmp(premier_elt_snd, obj) < 0: # obj > premier_elt_snd => Dans le second ensemble => 
                 return self._grammar[self._fst].count(n) + self._grammar[self._snd].rank(n, obj)
             else :
@@ -231,8 +263,6 @@ class UnionRule(ConstructorRule):
         return "(" + self._fst + " | " + self._snd + " )" 
     
 
-## Dest : Détruit un objet en deux sous objets 
-## Size : calcule la taille d'un objet
 class ProductRule(ConstructorRule):
     
     def __init__(self, fst, snd, cons, dest=None, size=None):
@@ -285,7 +315,7 @@ class ProductRule(ConstructorRule):
         nb_objets = self.count(n) 
         
         if(rank >= nb_objets):
-            raise ValueError("count = " + nb_objets + "\trang = " + rank)
+            raise ValueError("count = " + str(nb_objets) + "\trang = " + str(rank))
         
         # Grammaires / sous-règles 
         r1 = self._grammar[self._fst]
@@ -358,26 +388,37 @@ class ProductRule(ConstructorRule):
                     ret.append(self._cons(e1, e2))
         return ret
 
-    def rank(self, n, obj): 
+    def rank(self, n, obj):
         if self._dest is None:
             raise Lack_of_fun("Pas de destructeur donc pas de rank") 
         elif self._size is None:
             raise Lack_of_fun("Pas de calculateur de taille de l'objet")
+        
+        assert(self._size(obj) == n)
+
+        if(self._size(obj) == 1):
+            return 0
+        
         r1 = self._grammar[self._fst]
         r2 = self._grammar[self._snd] 
-        
+
         
         (obj1, obj2) = self._dest(obj)
+
         size1 = self._size(obj1)
         size2 = self._size(obj2)
-        
+        assert(size1 + size2 == n)
         rang1 = r1.rank(size1, obj1)
         rang2 = r2.rank(size2, obj2) 
         
         count1 = r1.count(size1)
-        count2 = r2.count(size2) 
+        count2 = r2.count(size2)
+
+        cpt = 0
+        for i in range(size1):
+            cpt += r1.count(i) * r2.count(n - i)
         
-        final_rank = count2 * rang1 + rang2 
+        final_rank = cpt + count2 * rang1 + rang2 
         
         return final_rank 
 
@@ -498,15 +539,15 @@ def is_correct(g):
     def f(r):
         
         if (isinstance(r, CondensedRule) and ((r._fst not in k) or (r._snd not in k))) or r.valuation() == max_int :
-            raise Bad_grammar
+            raise ValueError
         else: # rien à faire dans le cas de terminaux 
             pass 
     try:
         for r in k:
-            f(r)
-        return true 
-    except Bad_grammar:
-        return false
+            f(g[r])
+        return True 
+    except ValueError:
+        return False
 
 def init_grammar(g):
     """ 
@@ -529,40 +570,48 @@ def init_grammar(g):
             b = b or rule._update_valuation()
 
     if(not is_correct(g)):
-        raise Bad_grammar
+        raise ValueError("mauvaise grammaire") 
 
 
 #############################
 ### Grammaires condensées ###
 #############################
 
-
 UNION = 0
-PROD = 1 
+PROD  = 1 
 SINGLETON = 2  
-EPSILON = 3
-NONTERM = 4
+EPSILON  = 3
+NONTERM  = 4
 SEQUENCE = 5 
-
+BOUND = 6 
 class CondensedRule():
     """
-    Représente une règle "condensée", qui sera simplifiée dans la suite 
+    Représente une règle "condensée", qui sera simplifiée par la suite 
     """
     pass
 
-# TODO : définir fonctions additionnelles en param
+class Bound(CondensedRule):
+    def __init__(self, r, min, max):
+        self._max = max
+        self._min = min
+        self._r = _r
+        self.type = BOUND
+# TODO : définir fonctions optionnelles en param pour Union et Prodrule
 class Union(CondensedRule):
-    def __init__(self, r1, r2):
+    def __init__(self, r1, r2, cmp = None):
         self._r1 = r1
         self._r2 = r2
+        self._cmp = cmp
         self.type = UNION
 
         
 class Prod(CondensedRule): # Il faudrait peut-être définir les fonctions additionnelles en param
-    def __init__(self, r1, r2, cons):
+    def __init__(self, r1, r2, cons, dest=None, size=None):
         self._r1 = r1
         self._r2 = r2
-        self._cons = cons 
+        self._cons = cons
+        self._size = size
+        self._dest = dest
         self.type = PROD 
         
 class Singleton(CondensedRule): 
@@ -632,12 +681,12 @@ def simplif_rule(rule:CondensedRule, cpt:Cpt, d, keys_base):
         # Ajout des sous-règles au dictionnaire, puis du produit associé
         nom_sr1 = simplif_rule(rule._r1, cpt, d, keys_base) 
         nom_sr2 = simplif_rule(rule._r2, cpt, d, keys_base) 
-        d[new_rule_name] = ProductRule(nom_sr1, nom_sr2, rule._cons)
+        d[new_rule_name] = ProductRule(nom_sr1, nom_sr2, rule._cons, dest = rule._dest, size = rule._size)
         
     elif t == UNION:
         nom_sr1 = simplif_rule(rule._r1, cpt, d, keys_base)
         nom_sr2 = simplif_rule(rule._r2, cpt, d, keys_base)
-        d[new_rule_name] = UnionRule(nom_sr1, nom_sr2)
+        d[new_rule_name] = UnionRule(nom_sr1, nom_sr2, cmp = rule._cmp)
 
     elif t == SINGLETON:
         d[new_rule_name] = SingletonRule(rule._obj)
@@ -646,21 +695,21 @@ def simplif_rule(rule:CondensedRule, cpt:Cpt, d, keys_base):
         d[new_rule_name] = EpsilonRule(rule._obj)
 
     elif t == SEQUENCE:
-        # Sequence = union (sr1, sr2) 
         sr1 = Epsilon(rule.casvide)
-        sr2 = Prod(new_rule_name, rule.nonterm , rule.cons)
-        
+        sr2 = Prod(new_rule_name, rule.nonterm, rule.cons, rule._dest, rule._size)
         d[new_rule_name] = UnionRule(simplif_rule(sr1, cpt, d, keys_base), simplif_rule(sr2, cpt, d, keys_base))
+    elif t==BOUND:
+        sr1 = simplif_rule(rule._r, cpt, d, keys_base)
+        d[new_rule_name] = BoundRule(sr1, rule._min, rule._max)
     else:
         raise NotImplementedError
+
     ## Donner à l'appelant quel nom de règle citer 
     return new_rule_name
 
-
-
 def simplify_grammar(cond_g):
     """
-    Simplifie la grammaire complexe en paramètre en une grammaire simple 
+    Simplifie la grammaire complexe cond_g en paramètre en une grammaire simple 
     """
     new_gram = dict() # Dictionnaire retour : str -> AbstractRule
     cpt = Cpt() # Génération de noms de règles
@@ -669,12 +718,12 @@ def simplify_grammar(cond_g):
     # Simplification des règles 
     for rule_name in base_keys:
         # Principe (assez sale par ailleurs) : Lancer l'appel récursif sur chaque règle.
-        # Ensuite, renommer la règle qui vient d'être créée dans le dictionnaire
+        # Ensuite, renommer la règle qui est associé au non-terminal dans le dictionnaire
         # (qui représente une règle «compliquée») en le nom de la règle de base.
         
 
         # Création des entrées liées à chaque règle. La règle que l'on cherche à obtenir
-        # possède un mauvais nom, on va donc le renommer 
+        # possède le mauvais nom, on va donc le renommer 
         name = simplif_rule(cond_g[rule_name], cpt, new_gram, base_keys)
 
         # Renommage de l'entrée name en rule_name 
